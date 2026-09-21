@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Current City</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f9;
+        }
+        .container {
+            text-align: center;
+            padding: 30px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            color: white;
+            background-color: #007BFF;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Find My City</h2>
+        <button id="location-btn">Click to Find My City</button>
+        <div id="result">Your city will appear here...</div>
+    </div>
+
+    <script>
+        const button = document.getElementById('location-btn');
+        const resultDisplay = document.getElementById('result');
+
+        // Step 1: Listen for the button click
+        button.addEventListener('click', () => {
+            if ("geolocation" in navigator) {
+                resultDisplay.innerText = "Locating your device...";
+                
+                // Step 2: Request browser coordinates
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        
+                        // Step 3: Pass coordinates to the geocoding function
+                        getCityFromCoordinates(lat, lon);
+                    },
+                    (error) => {
+                        handleLocationError(error);
+                    }
+                );
+            } else {
+                resultDisplay.innerText = "Geolocation is not supported by your browser.";
+            }
+        });
+
+        // Step 4: Fetch the city name using OpenStreetMap Nominatim API
+        async function getCityFromCoordinates(latitude, longitude) {
+            resultDisplay.innerText = "Identifying your city...";
+            const url = `https://openstreetmap.org{latitude}&lon=${longitude}`;
+
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'User-Agent': 'MyTestLocationApp/1.0' // OpenStreetMap requires an identifier string
+                    }
+                });
+                const data = await response.json();
+                
+                const address = data.address;
+                // Fallbacks look for city, town, village, or municipality names
+                const city = address.city || address.town || address.village || address.suburb || address.county;
+                
+                if (city) {
+                    resultDisplay.innerText = `You are in: ${city}`;
+                } else {
+                    resultDisplay.innerText = "Could not pinpoint a specific city name, but coordinates were found.";
+                }
+            } catch (error) {
+                console.error(error);
+                resultDisplay.innerText = "Error fetching city name from the server.";
+            }
+        }
+
+        // Handle specific browser block/error messages
+        function handleLocationError(error) {
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    resultDisplay.innerText = "Permission denied. Please allow location access in your browser settings.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    resultDisplay.innerText = "Location information is unavailable on your device.";
+                    break;
+                case error.TIMEOUT:
+                    resultDisplay.innerText = "The request to get your location timed out.";
+                    break;
+                default:
+                    resultDisplay.innerText = "An unknown error occurred while retrieving location.";
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>
